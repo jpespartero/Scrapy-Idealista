@@ -7,6 +7,7 @@ from scrapy.spiders import CrawlSpider, Rule
 from scrapy.linkextractors import LinkExtractor
 from datetime import datetime
 
+
 class IdealistaSpider(CrawlSpider):
     name = "idealista"
     allowed_domains = ["idealista.com"]
@@ -14,7 +15,7 @@ class IdealistaSpider(CrawlSpider):
     ########################################################################
     ###       Add the url to crawl in the start_urls variable           ###
     ########################################################################
-    #start_urls = ['https://www.idealista.com/venta-viviendas/sevilla/sevilla-este/']
+    # start_urls = ['https://www.idealista.com/venta-viviendas/sevilla/sevilla-este/']
     start_urls = ['https://www.idealista.com/alquiler-viviendas/tres-cantos-madrid/']
 
     #######################################################################
@@ -41,15 +42,14 @@ class IdealistaSpider(CrawlSpider):
 
     ########################################################################
     rules = (
-            # Filter all the flats paginated by the website following the pattern indicated
-            Rule(LinkExtractor(restrict_xpaths=("//a[@class='icon-arrow-right-after']")),
-                 callback='parse_ads_index_page',
-                 follow=True),
-        )
+        # Filter all the flats paginated by the website following the pattern indicated
+        Rule(LinkExtractor(restrict_xpaths=("//a[@class='icon-arrow-right-after']")),
+             callback='parse_ads_index_page',
+             follow=True),
+    )
 
+    # Iterate over the house ids in the index page to get the details for each house advertising
     def parse_ads_index_page(self, response):
-
-        # Iterate over the house ids to get the details
         house_ids = IdealistaSpider.get_house_ids(response);
         for house_id in house_ids:
             item = IdealistaSpider.parse_house_info(self, response, house_id);
@@ -61,26 +61,26 @@ class IdealistaSpider(CrawlSpider):
 
     def parse_house_info(self, response, house_id):
         house_info = response.xpath("//*[@data-adid=" + house_id + "]")
-        house_info_data = house_info.xpath("//*[@data-adid=" + house_id + "]/*[@class='item-info-container']")
+        house_info_data = house_info.xpath("//*[@data-adid=" + house_id + "]/*[@class='item-info-container']")[0]
 
         date = datetime.utcnow().strftime('%Y-%m-%d')
         link = IdealistaSpider.parse_link(house_info_data)
         price = IdealistaSpider.parse_price(house_info_data)
         title = IdealistaSpider.parse_title(house_info_data)
         discount = IdealistaSpider.parse_discount(house_info_data)
-        sqft_m2 = IdealistaSpider.parse_sqft_m2(house_info_data)
+        size_m2 = IdealistaSpider.parse_size_m2(house_info_data)
         rooms = IdealistaSpider.parse_rooms(house_info_data)
-        floor_elevator = IdealistaSpider.parse_floor_elevator(house_info_data)
+        floor = IdealistaSpider.parse_floor(house_info_data)
 
         return IdealistaItem(adid=house_id,
-            date=date,
-            link=link,
-            price=price,
-            address=title,
-            discount=discount,
-            sqft_m2=sqft_m2,
-            rooms=rooms,
-            floor_elevator=floor_elevator)
+                             date=date,
+                             link=link,
+                             price=price,
+                             address=title,
+                             discount=discount,
+                             sqft_m2=size_m2,
+                             rooms=rooms,
+                             floor_elevator=floor)
 
     def parse_link(house_info_data):
         default_url = 'http://idealista.com'
@@ -89,7 +89,7 @@ class IdealistaSpider(CrawlSpider):
         return link;
 
     def parse_price(house_info_data):
-        price = house_info_data.xpath("//*[@class='price-row ']/span[@class='item-price h2-simulated']/text()").get()
+        price = house_info_data.xpath("*[@class='price-row ']/span[@class='item-price h2-simulated']/text()").get()
         price = float(price.replace('.', '').strip())
         return price;
 
@@ -98,50 +98,35 @@ class IdealistaSpider(CrawlSpider):
         return title;
 
     def parse_discount(house_info_data):
-        discount = house_info_data.xpath("//*[@class='price-row ']/span[@class='item-price h2-simulated']/text()").get()
+        pricedown_info = house_info_data.xpath("*[@class='price-row ']/span[@class='pricedown']")
+        if len(pricedown_info) == 0:
+            discount = 0
+        else:
+            discount = pricedown_info.xpath("*[@class='pricedown_price']/text()").get()
+            discount = float(discount.replace('.', '').replace('€','').strip())
+        return discount
 
-        #discounts_xpath = response.xpath("//*[@class='price-row ']")
-        #discounts = [0 if len(discount.xpath("./*[@class='item-price-down icon-pricedown']/text()").extract()) < 1
-        #             else discount.xpath("./*[@class='item-price-down icon-pricedown']/text()").extract().pop().replace(
-        #    '.', '').strip().split(' ').pop(0)
-        #             for discount in discounts_xpath]
-
-        return discount;
-
-    def parse_sqft_m2(house_info_data):
-        title = house_info_data.xpath("//*[@class='price-row ']/span[@class='item-price h2-simulated']/text()").get()
-
-        #sqfts_m2 = [float(
-        #    flat.xpath('span[@class="item-detail"]/small[starts-with(text(),"m")]/../text()').extract().pop().replace(
-        #        '.', '').strip())
-        #            if len(flat.xpath('span[@class="item-detail"]/small[starts-with(text(),"m")]')) == 1
-        #            else None
-         #           for flat in info_flats_xpath]
-
-        return title;
+    def parse_size_m2(house_info_data):
+        item_details = house_info_data.xpath('*[@class="item-detail-char"]')[0]
+        size_m2 = item_details.xpath('*[@class="item-detail"]/small[starts-with(text(),"m")]/../text()').get()
+        size_m2 = float(size_m2.replace('.', '').strip())
+        return size_m2
 
     def parse_rooms(house_info_data):
-        rooms = house_info_data.xpath("//*[@class='price-row ']/span[@class='item-price h2-simulated']/text()").get()
+        item_details = house_info_data.xpath('*[@class="item-detail-char"]')[0]
+        rooms = item_details.xpath('*[@class="item-detail"]/small[starts-with(text(),"hab.")]/../text()').get()
+        return rooms
 
-        #rooms = [int(flat.xpath(
-        #    'span[@class="item-detail"]/small[contains(text(),"hab.")]/../text()').extract().pop().strip())
-        #         if len(flat.xpath('span[@class="item-detail"]/small[contains(text(),"hab.")]')) == 1
-        #         else None
-        #         for flat in info_flats_xpath]
+    def parse_floor(house_info_data):
+        item_details = house_info_data.xpath('*[@class="item-detail-char"]')[0]
+        floor = item_details.xpath('*[@class="item-detail"][3]/text()').get()
+        return floor
 
-        return rooms;
+    def parse_garaje_incluido(self):
 
-    def parse_floor_elevator(house_info_data):
-        title = house_info_data.xpath("//*[@class='price-row ']/span[@class='item-price h2-simulated']/text()").get()
-
-        #floors_elevator = [flat.xpath('string(span[@class="item-detail"][last()])').extract().pop().strip()
-        #                   for flat in info_flats_xpath]
-
-        return title;
+        return 0;
 
     # def parse_house_ad_single_page(self, response):
 
-    #Overriding parse_start_url to get the first page
+    # Overriding parse_start_url to get the first page
     parse_start_url = parse_ads_index_page
-
-

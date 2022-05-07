@@ -2,6 +2,6 @@
 from scrapy.crawler import CrawlerProcess
 from idealista.spiders.idealista_spider import IdealistaSpider
 
-process = CrawlerProcess()
-process.crawl(IdealistaSpider)
-process.start()
+#process = CrawlerProcess()
+#process.crawl(IdealistaSpider)
+#process.start()
