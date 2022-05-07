@@ -64,40 +64,42 @@ class IdealistaSpider(CrawlSpider):
         house_info_data = house_info.xpath("//*[@data-adid=" + house_id + "]/*[@class='item-info-container']")[0]
 
         date = datetime.utcnow().strftime('%Y-%m-%d')
-        link = IdealistaSpider.parse_link(house_info_data)
-        price = IdealistaSpider.parse_price(house_info_data)
-        title = IdealistaSpider.parse_title(house_info_data)
-        discount = IdealistaSpider.parse_discount(house_info_data)
-        size_m2 = IdealistaSpider.parse_size_m2(house_info_data)
-        rooms = IdealistaSpider.parse_rooms(house_info_data)
-        floor = IdealistaSpider.parse_floor(house_info_data)
+        link = IdealistaSpider.parse_link(self, house_info_data)
+        price = IdealistaSpider.parse_price(self,house_info_data)
+        title = IdealistaSpider.parse_title(self, house_info_data)
+        discount = IdealistaSpider.parse_discount(self,house_info_data)
+        size_m2 = IdealistaSpider.parse_size_m2(self,house_info_data)
+        rooms = IdealistaSpider.parse_rooms(self,house_info_data)
+        floor = IdealistaSpider.parse_floor(self,house_info_data)
+        parking = IdealistaSpider.parse_parking_included(self,house_info_data)
 
         return IdealistaItem(adid=house_id,
                              date=date,
                              link=link,
+                             title=title,
                              price=price,
-                             address=title,
                              discount=discount,
-                             sqft_m2=size_m2,
+                             size_m2=size_m2,
                              rooms=rooms,
-                             floor_elevator=floor)
+                             floor=floor,
+                             parking=parking)
 
-    def parse_link(house_info_data):
+    def parse_link(self, house_info_data):
         default_url = 'http://idealista.com'
         house_link = house_info_data.xpath('a/@href').get()
         link = default_url + str(house_link)
-        return link;
+        return link
 
-    def parse_price(house_info_data):
+    def parse_price(self, house_info_data):
         price = house_info_data.xpath("*[@class='price-row ']/span[@class='item-price h2-simulated']/text()").get()
         price = float(price.replace('.', '').strip())
-        return price;
+        return price
 
-    def parse_title(house_info_data):
+    def parse_title(self, house_info_data):
         title = house_info_data.xpath('a/@title').extract().pop().encode('iso-8859-1')
-        return title;
+        return title
 
-    def parse_discount(house_info_data):
+    def parse_discount(self, house_info_data):
         pricedown_info = house_info_data.xpath("*[@class='price-row ']/span[@class='pricedown']")
         if len(pricedown_info) == 0:
             discount = 0
@@ -106,25 +108,29 @@ class IdealistaSpider(CrawlSpider):
             discount = float(discount.replace('.', '').replace('€','').strip())
         return discount
 
-    def parse_size_m2(house_info_data):
+    def parse_size_m2(self, house_info_data):
         item_details = house_info_data.xpath('*[@class="item-detail-char"]')[0]
         size_m2 = item_details.xpath('*[@class="item-detail"]/small[starts-with(text(),"m")]/../text()').get()
         size_m2 = float(size_m2.replace('.', '').strip())
         return size_m2
 
-    def parse_rooms(house_info_data):
+    def parse_rooms(self, house_info_data):
         item_details = house_info_data.xpath('*[@class="item-detail-char"]')[0]
         rooms = item_details.xpath('*[@class="item-detail"]/small[starts-with(text(),"hab.")]/../text()').get()
         return rooms
 
-    def parse_floor(house_info_data):
+    def parse_floor(self, house_info_data):
         item_details = house_info_data.xpath('*[@class="item-detail-char"]')[0]
         floor = item_details.xpath('*[@class="item-detail"][3]/text()').get()
         return floor
 
-    def parse_garaje_incluido(self):
-
-        return 0;
+    def parse_parking_included(self, house_info_data):
+        parking_info = house_info_data.xpath("*[@class='price-row ']/span[@class='item-parking']")
+        if len(parking_info) == 0:
+            parking = False
+        else:
+            parking = True
+        return parking
 
     # def parse_house_ad_single_page(self, response):
 

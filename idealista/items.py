@@ -13,9 +13,13 @@ class IdealistaItem(scrapy.Item):
     adid = scrapy.Field()
     date = scrapy.Field()
     link = scrapy.Field()
+    title = scrapy.Field()
+
     price = scrapy.Field()
-    address = scrapy.Field()
-    sqft_m2 = scrapy.Field()
-    rooms = scrapy.Field()
     discount = scrapy.Field()
-    floor_elevator = scrapy.Field()
+
+    size_m2 = scrapy.Field()
+    rooms = scrapy.Field()
+    floor = scrapy.Field()
+    parking = scrapy.Field()
+
