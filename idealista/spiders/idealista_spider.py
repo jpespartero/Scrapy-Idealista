@@ -1,13 +1,10 @@
-__author__ = 'David Carrasco'
+__author__ = ''
 
 import scrapy
-from scrapy.crawler import CrawlerProcess
 from idealista.items import IdealistaItem
 from scrapy.spiders import CrawlSpider, Rule
 from scrapy.linkextractors import LinkExtractor
 from datetime import datetime
-
-
 
 class IdealistaSpider(CrawlSpider):
     name = "idealista"
@@ -16,7 +13,6 @@ class IdealistaSpider(CrawlSpider):
     ########################################################################
     ###       Add the url to crawl in the start_urls variable           ###
     ########################################################################
-    # start_urls = ['https://www.idealista.com/venta-viviendas/sevilla/sevilla-este/']
     start_urls = ['https://www.idealista.com/alquiler-viviendas/tres-cantos-madrid/']
 
     #######################################################################
@@ -85,11 +81,10 @@ class IdealistaSpider(CrawlSpider):
                              floor=floor,
                              parking=parking)
 
-        # Open the house page to get the details
-        #IdealistaSpider.crawl_single_house_page(self, item)
+        # Open the house page to get additional details
+        # return IdealistaSpider.crawl_single_house_page(self, item)
 
-        return item;
-
+        return item
 
     def parse_link(self, house_info_data):
         default_url = 'http://idealista.com'
@@ -142,15 +137,19 @@ class IdealistaSpider(CrawlSpider):
     def crawl_single_house_page(self, item):
 
         # Open the house page to get the details
-        response = scrapy.Request(
+        request = scrapy.Request(
             url=item['link'],
+            callback=self.parse_house_ad_single_page,
             headers=self.headers,
+            #cb_kwargs=dict(item=item)
         )
-        #parse_house_ad_single_page(self, response, item)
+        request.cb_kwargs['item'] = item
+        return request
 
     def parse_house_ad_single_page(self, response, item):
+        self.logger.info("Visited house page: %s", response.url)
 
-        return 0
+        yield item
 
     # Overriding parse_start_url to get the first page
     parse_start_url = parse_ads_index_page
