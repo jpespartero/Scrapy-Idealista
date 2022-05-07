@@ -6,13 +6,13 @@ from scrapy.spiders import CrawlSpider, Rule
 from scrapy.linkextractors import LinkExtractor
 from datetime import datetime
 
+
 class IdealistaSpider(CrawlSpider):
     name = "idealista"
     allowed_domains = ["idealista.com"]
 
     ########################################################################
-    ###       Add the url to crawl in the start_urls variable           ###
-    ########################################################################
+    #  Add the url to crawl in the start_urls variable
     start_urls = ['https://www.idealista.com/alquiler-viviendas/tres-cantos-madrid/']
 
     #######################################################################
@@ -40,19 +40,19 @@ class IdealistaSpider(CrawlSpider):
 
     rules = (
         # Filter all the flats paginated by the website following the pattern indicated
-        Rule(LinkExtractor(restrict_xpaths=("//a[@class='icon-arrow-right-after']")),
+        Rule(LinkExtractor(restrict_xpaths="//a[@class='icon-arrow-right-after']"),
              callback='parse_ads_index_page',
              follow=True),
     )
 
     # Iterate over the house ids in the index page to get the details for each house advertising
     def parse_ads_index_page(self, response):
-        house_ids = IdealistaSpider.get_house_ids(response);
+        house_ids = IdealistaSpider.get_house_ids(self, response)
         for house_id in house_ids:
-            item = IdealistaSpider.parse_house_info(self, response, house_id);
+            item = IdealistaSpider.parse_house_info(self, response, house_id)
             yield item
 
-    def get_house_ids(response):
+    def get_house_ids(self, response):
         house_ids = response.xpath("//*[@data-adid]/@data-adid").getall()
         return house_ids
 
@@ -62,13 +62,13 @@ class IdealistaSpider(CrawlSpider):
 
         date = datetime.utcnow().strftime('%Y-%m-%d')
         link = IdealistaSpider.parse_link(self, house_info_data)
-        price = IdealistaSpider.parse_price(self,house_info_data)
+        price = IdealistaSpider.parse_price(self, house_info_data)
         title = IdealistaSpider.parse_title(self, house_info_data)
-        discount = IdealistaSpider.parse_discount(self,house_info_data)
-        size_m2 = IdealistaSpider.parse_size_m2(self,house_info_data)
-        rooms = IdealistaSpider.parse_rooms(self,house_info_data)
-        floor = IdealistaSpider.parse_floor(self,house_info_data)
-        parking = IdealistaSpider.parse_parking_included(self,house_info_data)
+        discount = IdealistaSpider.parse_discount(self, house_info_data)
+        size_m2 = IdealistaSpider.parse_size_m2(self, house_info_data)
+        rooms = IdealistaSpider.parse_rooms(self, house_info_data)
+        floor = IdealistaSpider.parse_floor(self, house_info_data)
+        parking = IdealistaSpider.parse_parking_included(self, house_info_data)
 
         item = IdealistaItem(adid=house_id,
                              date=date,
@@ -107,7 +107,7 @@ class IdealistaSpider(CrawlSpider):
             discount = 0
         else:
             discount = pricedown_info.xpath("*[@class='pricedown_price']/text()").get()
-            discount = float(discount.replace('.', '').replace('€','').strip())
+            discount = float(discount.replace('.', '').replace('€', '').strip())
         return discount
 
     def parse_size_m2(self, house_info_data):
@@ -141,7 +141,7 @@ class IdealistaSpider(CrawlSpider):
             url=item['link'],
             callback=self.parse_house_ad_single_page,
             headers=self.headers,
-            #cb_kwargs=dict(item=item)
+            # cb_kwargs=dict(item=item)
         )
         request.cb_kwargs['item'] = item
         return request
