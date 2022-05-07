@@ -8,6 +8,7 @@ from scrapy.linkextractors import LinkExtractor
 from datetime import datetime
 
 
+
 class IdealistaSpider(CrawlSpider):
     name = "idealista"
     allowed_domains = ["idealista.com"]
@@ -39,8 +40,8 @@ class IdealistaSpider(CrawlSpider):
         'DOWNLOAD_TIMEOUT': '10',
         'DOWNLOAD_DELAY': '5',
     }
-
     ########################################################################
+
     rules = (
         # Filter all the flats paginated by the website following the pattern indicated
         Rule(LinkExtractor(restrict_xpaths=("//a[@class='icon-arrow-right-after']")),
@@ -73,7 +74,7 @@ class IdealistaSpider(CrawlSpider):
         floor = IdealistaSpider.parse_floor(self,house_info_data)
         parking = IdealistaSpider.parse_parking_included(self,house_info_data)
 
-        return IdealistaItem(adid=house_id,
+        item = IdealistaItem(adid=house_id,
                              date=date,
                              link=link,
                              title=title,
@@ -83,6 +84,12 @@ class IdealistaSpider(CrawlSpider):
                              rooms=rooms,
                              floor=floor,
                              parking=parking)
+
+        # Open the house page to get the details
+        #IdealistaSpider.crawl_single_house_page(self, item)
+
+        return item;
+
 
     def parse_link(self, house_info_data):
         default_url = 'http://idealista.com'
@@ -132,7 +139,18 @@ class IdealistaSpider(CrawlSpider):
             parking = True
         return parking
 
-    # def parse_house_ad_single_page(self, response):
+    def crawl_single_house_page(self, item):
+
+        # Open the house page to get the details
+        response = scrapy.Request(
+            url=item['link'],
+            headers=self.headers,
+        )
+        #parse_house_ad_single_page(self, response, item)
+
+    def parse_house_ad_single_page(self, response, item):
+
+        return 0
 
     # Overriding parse_start_url to get the first page
     parse_start_url = parse_ads_index_page
