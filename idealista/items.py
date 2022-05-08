@@ -5,12 +5,11 @@
 # See documentation in:
 # http://doc.scrapy.org/en/latest/topics/items.html
 
-import scrapy
 from scrapy import Item, Field
 
 
 class IdealistaItem(Item):
-    #Matching variables of every flat to be scrapped
+
     adid = Field()
     adtype = Field()
     timestamp = Field()
@@ -30,6 +29,7 @@ class IdealistaItem(Item):
     # Price
     price = Field()
     discount = Field()
+    previous_price = Field()
 
     # Location
     country = Field()
@@ -50,3 +50,5 @@ class IdealistaItem(Item):
     has_terrace = Field()
     is_exterior = Field()
     is_second_hand = Field()
+    energy_certificate_consumption = Field()
+    energy_certificate_emissions = Field()

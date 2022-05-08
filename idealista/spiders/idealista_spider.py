@@ -13,7 +13,8 @@ class IdealistaSpider(CrawlSpider):
 
     ########################################################################
     #  Add the url to crawl in the start_urls variable
-    start_urls = ['https://www.idealista.com/alquiler-viviendas/tres-cantos-madrid/']
+    #start_urls = ['https://www.idealista.com/alquiler-viviendas/tres-cantos-madrid/']
+    start_urls = ['https://www.idealista.com/venta-viviendas/tres-cantos-madrid/']
 
     #######################################################################
     headers = {
@@ -49,9 +50,13 @@ class IdealistaSpider(CrawlSpider):
 
     # Iterate over the house ids in the index page to get the details for each house advertising
     def parse_ads_index_page(self, response):
+
+        adtype = IdealistaSpider.get_ad_type(self, response)
+
         house_ids = IdealistaSpider.get_house_ids(self, response)
         for house_id in house_ids:
             item = IdealistaSpider.parse_house_info(self, response, house_id)
+            item['adtype'] = adtype
 
             # TODO: Hay que ver como pasar un parametro exerno
             if self.scan_single_ads == True:
@@ -59,6 +64,13 @@ class IdealistaSpider(CrawlSpider):
                 yield request
             else:
                 yield item
+
+    def get_ad_type(selfself, response):
+        if 'alquiler' in response.url:
+            ad_type = 'rent'
+        else:
+            ad_type = 'sale'
+        return ad_type
 
     def get_house_ids(self, response):
         house_ids = response.xpath("//*[@data-adid]/@data-adid").getall()
@@ -68,26 +80,30 @@ class IdealistaSpider(CrawlSpider):
         house_info = response.xpath("//*[@data-adid=" + house_id + "]")
         house_info_data = house_info.xpath("//*[@data-adid=" + house_id + "]/*[@class='item-info-container']")[0]
 
+        timestamp = datetime.utcnow().isoformat()
         date = datetime.utcnow().strftime('%Y-%m-%d')
         link = IdealistaSpider.parse_link(self, house_info_data)
         price = IdealistaSpider.parse_price(self, house_info_data)
         title = IdealistaSpider.parse_title(self, house_info_data)
+        previous_price = IdealistaSpider.parse_previous_price(self, house_info_data)
         discount = IdealistaSpider.parse_discount(self, house_info_data)
         size_m2 = IdealistaSpider.parse_size_m2(self, house_info_data)
         rooms = IdealistaSpider.parse_rooms(self, house_info_data)
         floor = IdealistaSpider.parse_floor(self, house_info_data)
-        parking = IdealistaSpider.parse_parking_included(self, house_info_data)
+        has_parking = IdealistaSpider.parse_parking_included(self, house_info_data)
 
-        item = IdealistaItem(adid=house_id,
+        item = IdealistaItem(timestamp=timestamp,
+                             adid=house_id,
                              date=date,
                              link=link,
                              title=title,
                              price=price,
+                             previous_price=previous_price,
                              discount=discount,
                              size_m2=size_m2,
                              rooms=rooms,
                              floor=floor,
-                             parking=parking)
+                             has_parking=has_parking)
 
         return item
 
@@ -103,16 +119,25 @@ class IdealistaSpider(CrawlSpider):
         return price
 
     def parse_title(self, house_info_data):
-        title = house_info_data.xpath('a/@title').extract().pop().encode('iso-8859-1')
+        title = house_info_data.xpath('a/@title').extract().pop()   #.encode('iso-8859-1')
         return title
+
+    def parse_previous_price(self, house_info_data):
+        pricedown_info = house_info_data.xpath("*[@class='price-row ']/span[@class='pricedown']")
+        if len(pricedown_info) == 0:
+            previous_price = 0
+        else:
+            previous_price = pricedown_info.xpath("*[@class='pricedown_price']/text()").get()
+            previous_price = float(previous_price.replace('.', '').replace('€', '').strip())
+        return previous_price
 
     def parse_discount(self, house_info_data):
         pricedown_info = house_info_data.xpath("*[@class='price-row ']/span[@class='pricedown']")
         if len(pricedown_info) == 0:
             discount = 0
         else:
-            discount = pricedown_info.xpath("*[@class='pricedown_price']/text()").get()
-            discount = float(discount.replace('.', '').replace('€', '').strip())
+            discount = pricedown_info.xpath("*[@class='pricedown_icon icon-pricedown']/text()").get()
+            discount = float(discount.replace('.', '').replace('%', '').strip())
         return discount
 
     def parse_size_m2(self, house_info_data):
@@ -124,11 +149,17 @@ class IdealistaSpider(CrawlSpider):
     def parse_rooms(self, house_info_data):
         item_details = house_info_data.xpath('*[@class="item-detail-char"]')[0]
         rooms = item_details.xpath('*[@class="item-detail"]/small[starts-with(text(),"hab.")]/../text()').get()
+        if rooms is None:
+            rooms = 0
         return rooms
 
     def parse_floor(self, house_info_data):
         item_details = house_info_data.xpath('*[@class="item-detail-char"]')[0]
-        floor = item_details.xpath('*[@class="item-detail"][3]/text()').get()
+        floor = item_details.xpath('*[@class="item-detail"][starts-with(text(), "Planta")]/text()').get()
+        if floor is not None:
+            floor = floor.replace('Planta', '').replace('º', '').replace('ª', '').strip()
+        else:
+            floor = 0
         return floor
 
     def parse_parking_included(self, house_info_data):
