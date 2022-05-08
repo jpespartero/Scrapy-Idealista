@@ -9,7 +9,7 @@
 #
 
 from .proxies import get_proxies
-
+from idealista.elastic.scrapyelasticsearch import ElasticSearchPipeline
 
 ###########################
 # Main configuration
@@ -67,4 +67,22 @@ USER_AGENTS = [
 
 #ROTATING_PROXY_PAGE_RETRY_TIMES = 99999999999 # TODO: is it possible to setup this parameter with no limit?
 #ROTATING_PROXY_LIST = get_proxies()
+
+
+#########################
+# Elastic search configuration
+#########################
+
+ITEM_PIPELINES = {
+    #'scrapyelasticsearch.scrapyelasticsearch.ElasticSearchPipeline': 500
+    'idealista.elastic.scrapyelasticsearch.ElasticSearchPipeline': 500
+}
+
+ELASTICSEARCH_SERVERS = ['http://elastic:changeme@localhost:9200']
+ELASTICSEARCH_INDEX = 'idealista-debug'
+#ELASTICSEARCH_INDEX_DATE_FORMAT = '%Y-%m'
+ELASTICSEARCH_UNIQ_KEY = 'adid'
+
+# can also accept a list of fields if need a composite key
+#ELASTICSEARCH_UNIQ_KEY = ['url', 'id']
 

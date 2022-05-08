@@ -13,7 +13,7 @@ class IdealistaSpider(CrawlSpider):
 
     ########################################################################
     #  Add the url to crawl in the start_urls variable
-    #start_urls = ['https://www.idealista.com/alquiler-viviendas/tres-cantos-madrid/']
+    # start_urls = ['https://www.idealista.com/alquiler-viviendas/tres-cantos-madrid/']
     start_urls = ['https://www.idealista.com/venta-viviendas/tres-cantos-madrid/']
 
     #######################################################################
