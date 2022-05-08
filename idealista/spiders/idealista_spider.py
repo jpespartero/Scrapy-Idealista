@@ -45,12 +45,20 @@ class IdealistaSpider(CrawlSpider):
              follow=True),
     )
 
+    scan_single_ads = False
+
     # Iterate over the house ids in the index page to get the details for each house advertising
     def parse_ads_index_page(self, response):
         house_ids = IdealistaSpider.get_house_ids(self, response)
         for house_id in house_ids:
             item = IdealistaSpider.parse_house_info(self, response, house_id)
-            yield item
+
+            # TODO: Hay que ver como pasar un parametro exerno
+            if self.scan_single_ads == True:
+                request = IdealistaSpider.generate_single_house_page_request(self, item)
+                yield request
+            else:
+                yield item
 
     def get_house_ids(self, response):
         house_ids = response.xpath("//*[@data-adid]/@data-adid").getall()
@@ -80,9 +88,6 @@ class IdealistaSpider(CrawlSpider):
                              rooms=rooms,
                              floor=floor,
                              parking=parking)
-
-        # Open the house page to get additional details
-        # return IdealistaSpider.crawl_single_house_page(self, item)
 
         return item
 
@@ -134,7 +139,7 @@ class IdealistaSpider(CrawlSpider):
             parking = True
         return parking
 
-    def crawl_single_house_page(self, item):
+    def generate_single_house_page_request(self, item):
 
         # Open the house page to get the details
         request = scrapy.Request(

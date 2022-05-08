@@ -6,20 +6,47 @@
 # http://doc.scrapy.org/en/latest/topics/items.html
 
 import scrapy
+from scrapy import Item, Field
 
 
-class IdealistaItem(scrapy.Item):
+class IdealistaItem(Item):
     #Matching variables of every flat to be scrapped
-    adid = scrapy.Field()
-    date = scrapy.Field()
-    link = scrapy.Field()
-    title = scrapy.Field()
+    adid = Field()
+    adtype = Field()
+    timestamp = Field()
 
-    price = scrapy.Field()
-    discount = scrapy.Field()
+    date = Field()
+    link = Field()
+    title = Field()
+    description = Field()
+    last_update = Field()
 
-    size_m2 = scrapy.Field()
-    rooms = scrapy.Field()
-    floor = scrapy.Field()
-    parking = scrapy.Field()
+    #
+    user_name = Field()
+    is_particular = Field()
+    phoneNumber = Field()
+    email = Field()
 
+    # Price
+    price = Field()
+    discount = Field()
+
+    # Location
+    country = Field()
+    district = Field()
+    address = Field()
+    latitude = Field()
+    longitude = Field()
+    postal_code = Field()
+
+    # Characteristis
+    size_m2 = Field()
+    rooms = Field()
+    bathrooms = Field()
+    floor = Field()
+    has_parking = Field()
+    has_elevator = Field()
+    has_pool = Field()
+    has_terrace = Field()
+    is_exterior = Field()
+    is_second_hand = Field()
