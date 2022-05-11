@@ -37,7 +37,7 @@ class IdealistaSpider(CrawlSpider):
 
     custom_settings = {
         'DOWNLOAD_TIMEOUT': '5',
-        'DOWNLOAD_DELAY': '1',
+        'DOWNLOAD_DELAY': '5',
     }
     ########################################################################
 
@@ -49,7 +49,7 @@ class IdealistaSpider(CrawlSpider):
     )
 
     scan_single_ads = True
-    handle_httpstatus_list = [301, 302]
+    # handle_httpstatus_list = [301, 302]
 
     # Iterate over the house ids in the index page to get the details for each house advertising
     def parse_ads_index_page(self, response):
@@ -111,7 +111,7 @@ class IdealistaSpider(CrawlSpider):
         return item
 
     def parse_link(self, house_info_data):
-        default_url = 'http://idealista.com'
+        default_url = 'https://idealista.com'
         house_link = house_info_data.xpath('a/@href').get()
         link = default_url + str(house_link)
         return link
@@ -179,11 +179,12 @@ class IdealistaSpider(CrawlSpider):
         request = Request(
             url=item['link'],
             callback=self.parse_single_house_ad_page,
-            headers=self.headers,
+            #headers=self.headers,
+            meta={ #'dont_redirect': True,
+                  'handle_httpstatus_list': [301, 302]}
             # dont_filter=True,
-            # cb_kwargs=dict(item=item)
+            # cb_kwargs=dict(item=item),
         )
-        #request.meta['dont_redirect'] = True
         request.cb_kwargs['item'] = item
         return request
 
