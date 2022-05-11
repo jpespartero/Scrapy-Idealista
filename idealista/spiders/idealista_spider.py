@@ -1,6 +1,8 @@
 __author__ = ''
 
 import scrapy
+from scrapy import Request
+
 from idealista.items import IdealistaItem
 from scrapy.spiders import CrawlSpider, Rule
 from scrapy.linkextractors import LinkExtractor
@@ -13,8 +15,8 @@ class IdealistaSpider(CrawlSpider):
 
     ########################################################################
     #  Add the url to crawl in the start_urls variable
-    # start_urls = ['https://www.idealista.com/alquiler-viviendas/tres-cantos-madrid/']
-    start_urls = ['https://www.idealista.com/venta-viviendas/tres-cantos-madrid/']
+    start_urls = ['https://www.idealista.com/alquiler-viviendas/tres-cantos-madrid/']
+    # start_urls = ['https://www.idealista.com/venta-viviendas/tres-cantos-madrid/']
 
     #######################################################################
     headers = {
@@ -34,8 +36,8 @@ class IdealistaSpider(CrawlSpider):
     user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.54 Safari/537.36'
 
     custom_settings = {
-        'DOWNLOAD_TIMEOUT': '10',
-        'DOWNLOAD_DELAY': '5',
+        'DOWNLOAD_TIMEOUT': '5',
+        'DOWNLOAD_DELAY': '1',
     }
     ########################################################################
 
@@ -46,7 +48,8 @@ class IdealistaSpider(CrawlSpider):
              follow=True),
     )
 
-    scan_single_ads = False
+    scan_single_ads = True
+    handle_httpstatus_list = [301, 302]
 
     # Iterate over the house ids in the index page to get the details for each house advertising
     def parse_ads_index_page(self, response):
@@ -173,19 +176,54 @@ class IdealistaSpider(CrawlSpider):
     def generate_single_house_page_request(self, item):
 
         # Open the house page to get the details
-        request = scrapy.Request(
+        request = Request(
             url=item['link'],
-            callback=self.parse_house_ad_single_page,
+            callback=self.parse_single_house_ad_page,
             headers=self.headers,
+            # dont_filter=True,
             # cb_kwargs=dict(item=item)
         )
+        #request.meta['dont_redirect'] = True
         request.cb_kwargs['item'] = item
         return request
 
-    def parse_house_ad_single_page(self, response, item):
+    def parse_single_house_ad_page(self, response, item):
         self.logger.info("Visited house page: %s", response.url)
 
+        # Parse the city
+        city = IdealistaSpider.parse_city(self, response)
+
+        # Parse the address
+        address = IdealistaSpider.parse_address(self, response)
+
+        # Parse the location coordinates
+        location_coordinates = IdealistaSpider.parse_location_coordinates(self, response)
+
         yield item
+
+
+    def parse_city(self, response):
+        city = response.xpath('//*[@id="sMap"]/text()').get()
+        if city is not None:
+            self.logger.info("City: %s", city)
+        else:
+            city = None
+        return city
+
+    def parse_address(self, response):
+        address_data = response.xpath('//*[@class="header-map-list"]')
+
+        address = ""
+
+        return address
+
+
+    def parse_location_coordinates(self, response):
+        location_coordinates = response.xpath('//*[@class="static-map"]').get()
+        self.logger.info("Location coordinates: %s", location_coordinates)
+        #if location_coordinates is not None:
+        return location_coordinates
+
 
     # Overriding parse_start_url to get the first page
     parse_start_url = parse_ads_index_page
