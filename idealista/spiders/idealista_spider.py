@@ -1,5 +1,7 @@
 __author__ = ''
 
+import logging
+
 import scrapy
 from scrapy import Request
 
@@ -36,7 +38,7 @@ class IdealistaSpider(CrawlSpider):
     user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.54 Safari/537.36'
 
     custom_settings = {
-        'DOWNLOAD_TIMEOUT': '5',
+        'DOWNLOAD_TIMEOUT': '10',
         'DOWNLOAD_DELAY': '1',
     }
     ########################################################################
@@ -184,16 +186,54 @@ class IdealistaSpider(CrawlSpider):
         return request
 
     def parse_single_house_ad_page(self, response, item):
-        self.logger.info("Visited house page: %s", response.url)
+        item['city'] = IdealistaSpider.parse_city(self, response)
+        item['address'] = IdealistaSpider.parse_address(self, response)
 
-        # Parse the city
-        city = IdealistaSpider.parse_city(self, response)
+        # Parse data in javascript
+        script_data = IdealistaSpider.get_java_script_data(self, response)
+        if script_data is not None:
 
-        # Parse the address
-        address = IdealistaSpider.parse_address(self, response)
+            # Parse location
+            mapConfig_value = IdealistaSpider.get_script_variable_value(self, script_data, 'mapConfig')
+            item['latitude'] = IdealistaSpider.get_json_value(self, mapConfig_value, 'latitude')
+            item['longitude'] = IdealistaSpider.get_json_value(self, mapConfig_value, 'longitude')
 
-        # Parse the location coordinates
-        location_coordinates = IdealistaSpider.parse_location_coordinates(self, response)
+            # Parse U-TAG data
+            utag_value = IdealistaSpider.get_script_variable_value(self, script_data, 'utag_data')
+            item['municipalityId'] = IdealistaSpider.get_json_value_quote(self, utag_value, 'municipalityId')
+            item['provinceId'] = IdealistaSpider.get_json_value_quote(self, utag_value, 'provinceId')
+            item['locationId'] = IdealistaSpider.get_json_value_quote(self, utag_value, 'locationId')
+            item['locationLevel'] = IdealistaSpider.get_json_value_quote(self, utag_value, 'locationLevel')
+            item['builtType'] = IdealistaSpider.get_json_value_quote(self, utag_value, 'builtType')
+
+            #item['price'] = IdealistaSpider.get_json_value(self, mapConfig_value, 'price')
+
+            characteristics_data = IdealistaSpider.get_json_data(self, utag_value, 'characteristics')
+            item['roomNumber'] = IdealistaSpider.get_json_value_quote(self, characteristics_data, 'roomNumber')
+            item['bathNumber'] = IdealistaSpider.get_json_value_quote(self, characteristics_data, 'bathNumber')
+            item['hasLift'] = IdealistaSpider.get_json_value_quote(self, characteristics_data, 'hasLift')
+            item['hasParking'] = IdealistaSpider.get_json_value_quote(self, characteristics_data, 'hasParking')
+            item['constructedArea'] = IdealistaSpider.get_json_value_quote(self, characteristics_data, 'constructedArea')
+
+            condition_data = IdealistaSpider.get_json_data(self, utag_value, 'condition')
+            item['isNewDevelopment'] = IdealistaSpider.get_json_value_quote(self, condition_data, 'isNewDevelopment')
+            item['isNeedsRenovating'] = IdealistaSpider.get_json_value_quote(self, condition_data, 'isNeedsRenovating')
+            item['isGoodCondition'] = IdealistaSpider.get_json_value_quote(self, condition_data, 'isGoodCondition')
+
+            item['photoNumber'] = IdealistaSpider.get_json_value_quote(self, utag_value, 'photoNumber')
+            item['videoNumber'] = IdealistaSpider.get_json_value_quote(self, utag_value, 'videoNumber')
+            item['hasFloorPlan'] = IdealistaSpider.get_json_value_quote(self, utag_value, 'hasFloorPlan')
+            # item['has3Dtour'] = IdealistaSpider.get_json_value_quote(self, utag_value, 'has3Dtour')
+            # item['hasHomeStaging'] = IdealistaSpider.get_json_value_quote(self, utag_value, 'hasHomeStaging')
+
+            owner_data = IdealistaSpider.get_json_data(self, utag_value, 'owner')
+            item['ownerType'] = IdealistaSpider.get_json_value_quote(self, owner_data, 'type')
+            item['commercialId'] = IdealistaSpider.get_json_value_quote(self, owner_data, 'commercialId')
+            item['commercialName'] = IdealistaSpider.get_json_value_quote(self, owner_data, 'commercialName')
+
+            # Post creation date??
+            post_data = IdealistaSpider.get_json_data(self, utag_value, 'post')
+            item['time'] = IdealistaSpider.get_json_value_quote(self, post_data, 'time')
 
         yield item
 
@@ -207,19 +247,50 @@ class IdealistaSpider(CrawlSpider):
         return city
 
     def parse_address(self, response):
-        address_data = response.xpath('//*[@class="header-map-list"]')
-
-        address = ""
+        address_data = response.xpath('//*[@class="header-map-list"]/text()')
+        address = ''.join([
+            address_line.get()
+            for address_line in address_data
+        ])
 
         return address
 
+    def get_java_script_data(self, response):
+        try:
+            script = ''.join([
+                text.get()
+                for text in response.css('script::text')
+                # if 'maps' in text.get()
+            ])
+        except:
+            script = None
+            logging.WARN("Error getting javascript data")
+        return script
 
-    def parse_location_coordinates(self, response):
-        location_coordinates = response.xpath('//*[@class="static-map"]').get()
-        self.logger.info("Location coordinates: %s", location_coordinates)
-        #if location_coordinates is not None:
-        return location_coordinates
+    def get_json_value(self, string, json_key):
+        key_start = string.find(json_key)
+        value_start = string.find("'", key_start)
+        value_end = string.find("'", value_start + 1)
+        return string[value_start + 1:value_end]
 
+    def get_json_data(self, string, json_key):
+        key_start = string.find(json_key)
+        value_start = string.find("{", key_start)
+        value_end = string.find("}", value_start + 1)
+        return string[value_start + 1:value_end]
+
+    def get_json_value_quote(self, string, json_key):
+        key_start = string.find(json_key)
+        value_start = string.find(':', key_start)
+        quote_start = string.find('"', value_start + 1)
+        quote_end = string.find('"', quote_start + 1)
+        return string[quote_start + 1:quote_end]
+
+    def get_script_variable_value(self, string, variable_name):
+        variable_start = string.find(variable_name)
+        value_start = string.find("=", variable_start)
+        value_end = string.find(";", value_start + 1)
+        return string[value_start + 1:value_end]
 
     # Overriding parse_start_url to get the first page
     parse_start_url = parse_ads_index_page

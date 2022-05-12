@@ -33,6 +33,7 @@ class IdealistaItem(Item):
 
     # Location
     country = Field()
+    city = Field()
     district = Field()
     address = Field()
     latitude = Field()
@@ -52,3 +53,29 @@ class IdealistaItem(Item):
     is_second_hand = Field()
     energy_certificate_consumption = Field()
     energy_certificate_emissions = Field()
+
+    # U Tag Data
+    municipalityId = Field()
+    provinceId = Field()
+    locationId = Field()
+    locationLevel = Field()
+    builtType = Field()
+    roomNumber = Field()
+    bathNumber = Field()
+    hasLift = Field()
+    hasParking = Field()
+    constructedArea = Field()
+    isNewDevelopment = Field()
+    isNeedsRenovating = Field()
+    isGoodCondition = Field()
+    photoNumber = Field()
+    videoNumber = Field()
+    hasFloorPlan = Field()
+    hasHomeStaging = Field()
+    hasHomeAppliances = Field()
+
+    ownerType = Field()
+    commercialId = Field()
+    commercialName = Field()
+
+    time = Field()
