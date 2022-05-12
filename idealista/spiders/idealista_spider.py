@@ -1,8 +1,6 @@
 __author__ = ''
 
 import logging
-
-import scrapy
 from scrapy import Request
 
 from idealista.items import IdealistaItem
@@ -188,6 +186,7 @@ class IdealistaSpider(CrawlSpider):
     def parse_single_house_ad_page(self, response, item):
         item['city'] = IdealistaSpider.parse_city(self, response)
         item['address'] = IdealistaSpider.parse_address(self, response)
+        item['detailed_description'] = IdealistaSpider.parse_detailed_description(self, response)
 
         # Parse data in javascript
         script_data = IdealistaSpider.get_java_script_data(self, response)
@@ -255,6 +254,10 @@ class IdealistaSpider(CrawlSpider):
 
         return address
 
+    def parse_detailed_description(self, response):
+        description_data = response.xpath('//*[@class="adCommentsLanguage expandable is-expandable"]/p[1]').get()
+        return description_data
+
     def get_java_script_data(self, response):
         try:
             script = ''.join([
@@ -264,7 +267,7 @@ class IdealistaSpider(CrawlSpider):
             ])
         except:
             script = None
-            logging.WARN("Error getting javascript data")
+            logging.warning("Error getting javascript data")
         return script
 
     def get_json_value(self, string, json_key):

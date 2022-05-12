@@ -19,6 +19,7 @@ class IdealistaItem(Item):
     title = Field()
     description = Field()
     last_update = Field()
+    detailed_description = Field()
 
     #
     user_name = Field()
